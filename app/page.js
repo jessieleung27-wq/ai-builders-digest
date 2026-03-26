@@ -3,7 +3,6 @@ import path from 'path';
 
 export default async function Home() {
   const digests = await getDigests();
-  const latestDigest = digests[0];
   
   const formatDate = (date) => {
     const d = new Date(date);
@@ -17,15 +16,17 @@ export default async function Home() {
 
   return (
     <div>
-      {/* 将数据注入到页面中供客户端使用 */}
+      {/* 将所有 digest 数据注入到页面中 */}
       <script
         dangerouslySetInnerHTML={{
-          __html: `window.__DIGESTS__ = ${JSON.stringify(digests.map(d => ({date: d.date, stats: d.stats})))};`
+          __html: `
+            window.__ALL_DIGESTS__ = ${JSON.stringify(digests)};
+          `
         }}
       />
       
-      <div id="root" data-latest={latestDigest ? latestDigest.date : ''}>
-        {/* 初始内容 - 服务器端渲染 */}
+      <div id="app-root">
+        {/* 初始 HTML - 服务器端渲染 */}
         <div style={{
           maxWidth: '1000px',
           margin: '0 auto',
@@ -57,27 +58,8 @@ export default async function Home() {
           </header>
 
           <div style={{ display: 'flex', gap: '40px' }}>
-            <main style={{ flex: '1', minWidth: 0 }}>
-              {latestDigest ? (
-                <>
-                  <h2 style={{
-                    fontSize: '24px',
-                    marginBottom: '20px',
-                    color: '#000'
-                  }}>
-                    {formatDate(latestDigest.date)}
-                  </h2>
-                  <div
-                    dangerouslySetInnerHTML={{ __html: latestDigest.content }}
-                    style={{
-                      fontSize: '15px',
-                      lineHeight: '1.8'
-                    }}
-                  />
-                </>
-              ) : (
-                <p style={{ color: '#999' }}>暂无简报</p>
-              )}
+            <main style={{ flex: '1', minWidth: 0 }} id="main-content">
+              {/* 内容由客户端 JS 渲染 */}
             </main>
 
             <aside style={{
@@ -85,7 +67,7 @@ export default async function Home() {
               flexShrink: 0,
               borderLeft: '1px solid #e5e5e5',
               paddingLeft: '20px'
-            }}>
+            }} id="sidebar">
               <h3 style={{
                 fontSize: '14px',
                 fontWeight: '600',
@@ -100,25 +82,8 @@ export default async function Home() {
                 listStyle: 'none',
                 padding: 0,
                 margin: 0
-              }}>
-                {digests.map((digest) => (
-                  <li key={digest.date} style={{ marginBottom: '10px' }}>
-                    <a
-                      href={`?date=${digest.date}`}
-                      className="date-link"
-                      data-date={digest.date}
-                      style={{
-                        fontSize: '13px',
-                        color: '#666',
-                        fontWeight: '400',
-                        textDecoration: 'none',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {formatDate(digest.date)}
-                    </a>
-                  </li>
-                ))}
+              }} id="date-list">
+                {/* 日期列表由客户端 JS 渲染 */}
               </ul>
             </aside>
           </div>
@@ -166,32 +131,72 @@ export default async function Home() {
     window.history.pushState({}, '', url);
   }
   
-  var digests = window.__DIGESTS__ || [];
-  var links = document.querySelectorAll('.date-link');
+  var digests = window.__ALL_DIGESTS__ || [];
   
-  function updateActiveLink() {
-    var activeDate = getQueryParam('date') || (digests[0] && digests[0].date);
-    links.forEach(function(link) {
-      if (link.getAttribute('data-date') === activeDate) {
-        link.style.color = '#0066cc';
-        link.style.fontWeight = '600';
-      } else {
-        link.style.color = '#666';
-        link.style.fontWeight = '400';
-      }
+  // 渲染侧边栏日期列表
+  function renderSidebar(activeDate) {
+    var list = document.getElementById('date-list');
+    if (!list) return;
+    
+    list.innerHTML = '';
+    digests.forEach(function(digest) {
+      var li = document.createElement('li');
+      li.style.marginBottom = '10px';
+      
+      var a = document.createElement('a');
+      a.href = '?date=' + digest.date;
+      a.setAttribute('data-date', digest.date);
+      a.style.fontSize = '13px';
+      a.style.color = digest.date === activeDate ? '#0066cc' : '#666';
+      a.style.fontWeight = digest.date === activeDate ? '600' : '400';
+      a.style.textDecoration = 'none';
+      a.style.cursor = 'pointer';
+      a.textContent = formatDate(digest.date);
+      
+      a.addEventListener('click', function(e) {
+        e.preventDefault();
+        var date = this.getAttribute('data-date');
+        setQueryParam('date', date);
+        render();
+      });
+      
+      li.appendChild(a);
+      list.appendChild(li);
     });
   }
   
-  links.forEach(function(link) {
-    link.addEventListener('click', function(e) {
-      e.preventDefault();
-      var date = this.getAttribute('data-date');
-      setQueryParam('date', date);
-      updateActiveLink();
-    });
-  });
+  // 渲染主内容
+  function renderMain(activeDate) {
+    var main = document.getElementById('main-content');
+    if (!main) return;
+    
+    var digest = digests.find(function(d) { return d.date === activeDate; }) || digests[0];
+    
+    if (!digest) {
+      main.innerHTML = '<p style=\\"color:#999\\">暂无简报</p>';
+      return;
+    }
+    
+    main.innerHTML = 
+      '<h2 style=\\"font-size:24px;margin-bottom:20px;color:#000;\\">' + 
+      formatDate(digest.date) + 
+      '</h2><div style=\\"font-size:15px;line-height:1.8;\\">' + 
+      digest.content + 
+      '</div>';
+  }
   
-  updateActiveLink();
+  // 完整渲染
+  function render() {
+    var activeDate = getQueryParam('date') || (digests[0] && digests[0].date);
+    renderSidebar(activeDate);
+    renderMain(activeDate);
+  }
+  
+  // 监听 URL 变化
+  window.addEventListener('popstate', render);
+  
+  // 初始渲染
+  render();
 })();
           `
         }}
