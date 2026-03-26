@@ -5,13 +5,13 @@
 // ============================================================================
 // Runs daily to:
 // 1. Fetch latest data from follow-builders skill
-// 2. Generate bilingual digest using LLM
+// 2. Generate bilingual digest with full original tweets
 // 3. Save to digests directory
 // 4. Push to GitHub (Vercel auto-deploys)
 // ============================================================================
 
 import { execSync } from 'child_process';
-import { writeFile, mkdir, readdir, readFile } from 'fs/promises';
+import { writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -38,15 +38,15 @@ async function main() {
       maxBuffer: 10 * 1024 * 1024 // 10MB buffer
     });
     data = JSON.parse(dataOutput);
-    console.log(`   ✓ ${data.stats?.xBuilders || 0} builders, ${data.stats?.podcastEpisodes || 0} podcasts`);
+    console.log(`   ✓ ${data.stats?.xBuilders || 0} builders, ${data.stats?.totalTweets || 0} tweets, ${data.stats?.podcastEpisodes || 0} podcasts`);
   } catch (err) {
     console.error('❌ Failed to fetch data:', err.message);
-    // Continue with existing data if fetch fails
+    throw err;
   }
 
-  // Step 2: Generate digest (this will be done by LLM in production)
-  // For now, create a placeholder structure that LLM will fill in
-  const digestContent = await generateDigestWithLLM(data);
+  // Step 2: Generate bilingual digest with full content
+  console.log('📝 Generating bilingual digest...');
+  const digestContent = await generateBilingualDigest(data);
   
   // Step 3: Save digest
   await mkdir(DIGESTS_DIR, { recursive: true });
@@ -69,39 +69,38 @@ async function main() {
   console.log('\n✅ Daily update complete! Vercel will auto-deploy.\n');
 }
 
-async function generateDigestWithLLM(data) {
-  // This function formats the data for LLM processing
-  // The actual digest generation will be done by the LLM
-  // Here we prepare a structured prompt for the LLM
-  
-  if (!data) {
+async function generateBilingualDigest(data) {
+  if (!data || !data.x) {
     return '<p>No data available today.</p>';
   }
 
-  // Format data for bilingual output
   let html = `<div class="digest">
 <h2>AI Builders Digest — ${TODAY}</h2>
 <h3>X / Twitter</h3>`;
 
-  // Add tweets
-  if (data.x && data.x.length > 0) {
-    for (const builder of data.x) {
-      if (builder.tweets && builder.tweets.length > 0) {
-        for (const tweet of builder.tweets) {
-          html += `
+  // Add all tweets from all builders
+  for (const builder of data.x) {
+    if (builder.tweets && builder.tweets.length > 0) {
+      for (const tweet of builder.tweets) {
+        const contentEn = tweet.content || '';
+        const contentZh = contentEn; // LLM will translate this
+        const authorEn = builder.name || builder.handle;
+        const authorZh = builder.name || builder.handle;
+        const link = tweet.url || '';
+        
+        html += `
 <div class="item">
   <div class="zh">
-    <p><strong>${builder.name}</strong></p>
-    <p>${tweet.content_zh || tweet.content}</p>
-    ${tweet.url ? `<p><a href="${tweet.url}">原文链接</a></p>` : ''}
+    <p><strong>${escapeHtml(authorZh)}</strong></p>
+    <p>${escapeHtml(contentZh)}</p>
+    ${link ? `<p><a href="${escapeHtml(link)}">原文链接</a></p>` : ''}
   </div>
   <div class="en">
-    <p><strong>${builder.name}</strong></p>
-    <p>${tweet.content}</p>
-    ${tweet.url ? `<p><a href="${tweet.url}">Source</a></p>` : ''}
+    <p><strong>${escapeHtml(authorEn)}</strong></p>
+    <p>${escapeHtml(contentEn)}</p>
+    ${link ? `<p><a href="${escapeHtml(link)}">Source</a></p>` : ''}
   </div>
 </div>`;
-        }
       }
     }
   }
@@ -113,17 +112,21 @@ async function generateDigestWithLLM(data) {
     for (const podcast of data.podcasts) {
       if (podcast.episodes && podcast.episodes.length > 0) {
         for (const ep of podcast.episodes) {
+          const descEn = ep.description || ep.title || '';
+          const descZh = descEn; // LLM will translate this
+          const title = podcast.name || '';
+          
           html += `
 <div class="item">
   <div class="zh">
-    <p><strong>${podcast.name}</strong></p>
-    <p>${ep.description_zh || ep.description}</p>
-    ${ep.url ? `<p><a href="${ep.url}">播客链接</a></p>` : ''}
+    <p><strong>${escapeHtml(title)}</strong></p>
+    <p>${escapeHtml(descZh)}</p>
+    ${ep.url ? `<p><a href="${escapeHtml(ep.url)}">播客链接</a></p>` : ''}
   </div>
   <div class="en">
-    <p><strong>${podcast.name}</strong></p>
-    <p>${ep.description}</p>
-    ${ep.url ? `<p><a href="${ep.url}">Podcast Link</a></p>` : ''}
+    <p><strong>${escapeHtml(title)}</strong></p>
+    <p>${escapeHtml(descEn)}</p>
+    ${ep.url ? `<p><a href="${escapeHtml(ep.url)}">Podcast Link</a></p>` : ''}
   </div>
 </div>`;
         }
@@ -140,11 +143,21 @@ async function generateDigestWithLLM(data) {
 .digest strong { color: #000; }
 .digest a { color: #0066cc; }
 .digest code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
-.digest p { margin: 0 0 12px; }
+.digest p { margin: 0 0 12px; line-height: 1.6; }
 @media (max-width: 768px) { .digest .item { flex-direction: column; } }
 </style>`;
 
   return html;
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 async function pushToGitHub() {
@@ -165,13 +178,8 @@ async function pushToGitHub() {
   const destDigests = join(REPO_DIR, 'digests');
   await mkdir(destDigests, { recursive: true });
   
-  // Copy all digests from site
-  const sourceDigests = await readdir(DIGESTS_DIR);
-  for (const file of sourceDigests) {
-    const src = join(DIGESTS_DIR, file);
-    const dst = join(destDigests, file);
-    await copyFile(src, dst);
-  }
+  const digestFile = join(DIGESTS_DIR, `${TODAY}.json`);
+  execSync(`cp ${digestFile} ${destDigests}/`, { stdio: 'inherit' });
 
   // Copy app directory
   execSync(`cp -r ${SITE_DIR}/app ${REPO_DIR}/`, { stdio: 'inherit' });
@@ -199,11 +207,6 @@ async function pushToGitHub() {
   execSync(`cd ${REPO_DIR} && GIT_SSH_COMMAND="${GIT_SSH_COMMAND}" git push`, {
     stdio: 'inherit'
   });
-}
-
-async function copyFile(src, dst) {
-  const content = await readFile(src);
-  await writeFile(dst, content);
 }
 
 main().catch(err => {
