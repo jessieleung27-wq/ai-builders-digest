@@ -1,18 +1,8 @@
 {
   "date": "2026-03-26",
-  "content": "<div class=\"digest\"><h2>AI Builders Digest — 2026年3月26日</h2><h3>X / Twitter</h3><div class=\"item\"><div class=\"zh\"><p><strong>Andrej Karpathy（前特斯拉AI总监、OpenAI创始人之一）</strong></p><p>LiteLLM PyPI 供应链攻击令人震惊。一次简单的 <code>pip install litellm</code> 就能窃取 SSH 密钥、AWS/GCP/Azure 凭证、Kubernetes 配置、Git 凭证、环境变量、加密钱包等所有敏感信息。LiteLLM 月下载量高达 9700 万次，而攻击包仅上线约 1 小时就被发现。</p></div><div class=\"en\"><p><strong>Andrej Karpathy (Former Tesla AI Director, OpenAI Co-founder)</strong></p><p>The LiteLLM PyPI supply chain attack is shocking. A simple <code>pip install litellm</code> can steal SSH keys, cloud credentials, Kubernetes configs, Git credentials, env vars, crypto wallets, and more. LiteLLM has 97M monthly downloads, and the malicious package was live for only ~1 hour.</p></div></div><div class=\"item\"><div class=\"zh\"><p><strong>Claude 团队</strong></p><p>Claude Code 推出了「自动模式」——不再需要批准每个文件写入和 bash 命令，也不再跳过所有权限。自动模式让 Claude 代为做出权限决策，但在运行前会对每个操作进行安全检查。</p></div><div class=\"en\"><p><strong>Claude Team</strong></p><p>Claude Code launched \"auto mode\" — no longer needing to approve every file write and bash command, or skip all permissions. Auto mode lets Claude make permission decisions for you, but performs safety checks on each operation before running.</p></div></div><h3>Podcasts</h3><div class=\"item\"><div class=\"zh\"><p><strong>Latent Space — AI for Materials Discovery with Heather Kulik</strong></p><p>MIT 化学工程教授 Heather Kulik 分享了她在材料发现中应用 AI 的实践。她的团队最近用 AI 筛选了数万种材料，发现了一个意想不到的化学现象，使聚合物网络的韧性提高了 4 倍。这个设计让实验人员感到惊讶——他们自己永远不会想到这一点，但实验室制造的材料确实更坚韧。</p></div><div class=\"en\"><p><strong>Latent Space — AI for Materials Discovery with Heather Kulik</strong></p><p>MIT Professor Heather Kulik shared her practice of applying AI to materials discovery. Her team recently used AI to screen tens of thousands of materials and discovered an unexpected chemical phenomenon that made polymer networks 4x tougher. The design surprised the experimentalists — they never would have thought of it themselves.</p></div></div></div><style>{`.digest .item { display: flex; gap: 20px; margin-bottom: 24px; border-bottom: 1px solid #eee; padding-bottom: 24px; }
-.digest .zh, .digest .en { flex: 1; min-width: 0; }
-.digest h2 { font-size: 24px; margin-bottom: 20px; }
-.digest h3 { font-size: 18px; margin: 24px 0 16px; color: #333; }
-.digest strong { color: #000; }
-.digest a { color: #0066cc; }
-.digest code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
-.digest p { margin: 0 0 12px; }
-.digest hr { border: none; border-top: 1px solid #eee; margin: 24px 0; }
-@media (max-width: 768px) { .digest .item { flex-direction: column; } }`}</style>",
+  "content": "<div class=\"digest\">\n<h2>AI Builders Digest — 2026年3月26日</h2>\n<h3>X / Twitter</h3>\n<div class=\"item\">\n  <div class=\"zh\">\n    <p><strong>Andrej Karpathy（前特斯拉AI总监）</strong></p>\n    <p>LiteLLM PyPI 供应链攻击令人震惊。一次简单的 pip install 就能窃取所有敏感信息。</p>\n  </div>\n  <div class=\"en\">\n    <p><strong>Andrej Karpathy</strong></p>\n    <p>The LiteLLM PyPI supply chain attack is shocking. A simple pip install can steal all sensitive data.</p>\n  </div>\n</div>\n<div class=\"item\">\n  <div class=\"zh\">\n    <p><strong>Claude 团队</strong></p>\n    <p>Claude Code 推出了自动模式——让 Claude 代为做出权限决策。</p>\n  </div>\n  <div class=\"en\">\n    <p><strong>Claude Team</strong></p>\n    <p>Claude Code launched auto mode — lets Claude make permission decisions for you.</p>\n  </div>\n</div>\n</div>\n<style>\n.digest .item { display: flex; gap: 20px; margin-bottom: 24px; }\n.digest .zh, .digest .en { flex: 1; }\n.digest h2 { font-size: 24px; }\n.digest h3 { font-size: 18px; margin: 24px 0 16px; }\n@media (max-width: 768px) { .digest .item { flex-direction: column; } }\n</style>",
   "stats": {
     "xBuilders": 25,
-    "podcastEpisodes": 1,
-    "totalTweets": 50
+    "podcastEpisodes": 1
   }
 }
