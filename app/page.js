@@ -1,9 +1,42 @@
-import fs from 'fs';
-import path from 'path';
+'use client';
 
-export default async function Home() {
-  const digests = await getDigests();
-  const latestDigest = digests[0];
+import { useState, useEffect } from 'react';
+
+export default function Home() {
+  const [digests, setDigests] = useState([]);
+  const [activeDate, setActiveDate] = useState(null);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    // 从 URL hash 获取初始日期
+    const hash = window.location.hash.slice(1);
+    
+    // 获取所有日期
+    fetch('/digests.json')
+      .then(res => res.json())
+      .then(data => {
+        setDigests(data);
+        if (hash && data.find(d => d.date === hash)) {
+          setActiveDate(hash);
+        } else if (data.length > 0) {
+          setActiveDate(data[0].date);
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+    
+    // 监听 hash 变化
+    const handleHashChange = () => {
+      const newHash = window.location.hash.slice(1);
+      if (newHash && digests.find(d => d.date === newHash)) {
+        setActiveDate(newHash);
+      }
+    };
+    
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+  
   const formatDate = (date) => {
     const d = new Date(date);
     return d.toLocaleDateString('zh-CN', {
@@ -13,6 +46,18 @@ export default async function Home() {
       weekday: 'long'
     });
   };
+  
+  const activeDigest = activeDate 
+    ? digests.find(d => d.date === activeDate)
+    : (digests[0] || null);
+
+  if (loading) {
+    return <div style={{ padding: '40px', textAlign: 'center' }}>加载中...</div>;
+  }
+
+  if (!activeDigest) {
+    return <div style={{ padding: '40px', textAlign: 'center' }}>暂无简报</div>;
+  }
 
   return (
     <div style={{
@@ -48,26 +93,20 @@ export default async function Home() {
       <div style={{ display: 'flex', gap: '40px' }}>
         {/* 主内容区 */}
         <main style={{ flex: '1', minWidth: 0 }}>
-          {latestDigest ? (
-            <>
-              <h2 style={{
-                fontSize: '24px',
-                marginBottom: '20px',
-                color: '#000'
-              }}>
-                {formatDate(latestDigest.date)}
-              </h2>
-              <div
-                dangerouslySetInnerHTML={{ __html: latestDigest.content }}
-                style={{
-                  fontSize: '15px',
-                  lineHeight: '1.8'
-                }}
-              />
-            </>
-          ) : (
-            <p style={{ color: '#999' }}>暂无简报</p>
-          )}
+          <h2 style={{
+            fontSize: '24px',
+            marginBottom: '20px',
+            color: '#000'
+          }}>
+            {formatDate(activeDigest.date)}
+          </h2>
+          <div
+            dangerouslySetInnerHTML={{ __html: activeDigest.content }}
+            style={{
+              fontSize: '15px',
+              lineHeight: '1.8'
+            }}
+          />
         </main>
 
         {/* 侧边栏 - 历史记录 */}
@@ -92,15 +131,21 @@ export default async function Home() {
             padding: 0,
             margin: 0
           }}>
-            {digests.map((digest, index) => (
-              <li key={index} style={{ marginBottom: '10px' }}>
+            {digests.map((digest) => (
+              <li key={digest.date} style={{ marginBottom: '10px' }}>
                 <a
                   href={`#${digest.date}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.location.hash = digest.date;
+                    setActiveDate(digest.date);
+                  }}
                   style={{
                     fontSize: '13px',
-                    color: index === 0 ? '#000' : '#666',
-                    fontWeight: index === 0 ? '600' : '400',
-                    textDecoration: 'none'
+                    color: digest.date === activeDate ? '#0066cc' : '#666',
+                    fontWeight: digest.date === activeDate ? '600' : '400',
+                    textDecoration: 'none',
+                    cursor: 'pointer'
                   }}
                 >
                   {formatDate(digest.date)}
@@ -123,24 +168,4 @@ export default async function Home() {
       </footer>
     </div>
   );
-}
-
-async function getDigests() {
-  const digestsDir = path.join(process.cwd(), 'digests');
-  const digests = [];
-
-  if (fs.existsSync(digestsDir)) {
-    const files = fs.readdirSync(digestsDir)
-      .filter(f => f.endsWith('.json'))
-      .sort()
-      .reverse();
-
-    for (const file of files) {
-      const filePath = path.join(digestsDir, file);
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-      digests.push(data);
-    }
-  }
-
-  return digests;
 }
